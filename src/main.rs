@@ -1,9 +1,8 @@
 #![allow(warnings)]
 use anyhow::Result;
-use chrono::{DateTime, Local, TimeZone};
+use chrono::{DateTime, Local, TimeZone, Utc};
 use lockfree::channel::spsc::{create, Receiver, Sender};
 use std::collections::HashMap;
-// use tokio::thread::spawn;;
 use std::thread;
 
 #[tokio::main]
@@ -17,33 +16,18 @@ async fn async_logging_thread() -> Result<()> {
     let guard = thread::spawn(move || {
         let core_ids = core_affinity::get_core_ids().unwrap();
         core_affinity::set_for_current(*core_ids.last().unwrap());
-        match rx.recv() {
-            Ok(msg) => {
-                msg.invoke();
-            }
-            Err(e) => {
-                panic!("error yada ");
-            }
+        while let Ok(raw_func) = rx.recv() {
+            raw_func.invoke();
         }
     });
-    let date = Local::now();
-    let log_msg = format!(
-        "ts: {}, volue: {}, price: {}, flag: {}",
-        date.format("%Y-%m-%d %H:%M:%S"),
-        100.01,
-        20000,
-        true
-    );
-    let log = sx.send(RawFunc::new(move || {
-        println!(
-            "ts: {}, volue: {}, price: {}, flag: {}",
-            date.format("%Y-%m-%d %H:%M:%S"),
-            100.01,
-            20000,
-            true
-        );
-    }));
-    // .unwrap();
+
+    let logger = Logger::new();
+
+    let log_message = LogMsg::Warning {
+        warning_message: "testing_message",
+    };
+    let raw_func = RawFunc::new(move || logger.log(log_message.clone()));
+    sx.send(raw_func);
 
     Ok(())
 }
@@ -52,21 +36,26 @@ struct Logger<'a> {
     formats: HashMap<LogMsg<'a>, String>,
 }
 impl<'a> Logger<'a> {
+    fn new() -> Self {
+        Self {
+            formats: HashMap::new(),
+        }
+    }
     fn log(&self, message: LogMsg) {
-        // let format_str = self.formats.get(&message.warning).unwrap(); // old version before enum
-        // switch, add pattern matching for log formatting
+        let formatted_msg = message.format();
+        println!("{:?}", formatted_msg);
     }
     fn log_from_deserialized_generic<T>(&self, message: &T) {
         // Not sure if this will work from a performance standpoint, may have to seperate streams and call specific log method on msg relative to deserialized stream message type, have to think about this more and test.
         //
         // TODO: Takes generic type representing different variations of deserialized stream data,
         // matches data elements to log variables and calls logs with correct methods based on msg
-        // data components. Adding TODO for implementation tomorrow morning.
+        // data components.
     }
 }
 
 struct RawFunc {
-    data: Box<dyn Fn() + Send + 'static>,
+    closure: Box<dyn Fn() + Send + 'static>,
 }
 
 impl RawFunc {
@@ -75,20 +64,21 @@ impl RawFunc {
         T: Fn() + Send + 'static,
     {
         return RawFunc {
-            data: Box::new(data),
+            closure: Box::new(data),
         };
     }
     fn invoke(self) {
-        (self.data)()
+        (self.closure)()
     }
 }
-#[derive(Eq, PartialEq, Hash)]
 //NOTE: these fields on LogMsg are testing examples, need to change inputs before adding to trade
 //execution platform
+//
+#[derive(Debug, Eq, PartialEq, Hash, Clone)]
 enum LogMsg<'a> {
     Event(EventTypes<'a>),
     Warning {
-        warning_message: &'a str,
+        warning_message: &'static str,
     },
     Info {
         timestamp: &'a str,
@@ -122,7 +112,7 @@ impl<'a> LogMsg<'a> {
     }
 }
 
-#[derive(Eq, PartialEq, Hash)]
+#[derive(Eq, PartialEq, Hash, Debug, Clone)]
 enum EventTypes<'a> {
     MarketOrderBookUpdate {
         symbol: &'a str,
