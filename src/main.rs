@@ -48,12 +48,20 @@ async fn async_logging_thread() -> Result<()> {
     Ok(())
 }
 
-struct Logger {
-    formats: HashMap<LogMsg, String>,
+struct Logger<'a> {
+    formats: HashMap<LogMsg<'a>, String>,
 }
-impl Logger {
-    fn send(&self, message: RawFunc) {
-        let format_str = self.formats.get(&message.data).unwrap();
+impl<'a> Logger<'a> {
+    fn log(&self, message: LogMsg) {
+        // let format_str = self.formats.get(&message.warning).unwrap(); // old version before enum
+        // switch, add pattern matching for log formatting
+    }
+    fn log_from_deserialized_generic<T>(&self, message: &T) {
+        // Not sure if this will work from a performance standpoint, may have to seperate streams and call specific log method on msg relative to deserialized stream message type, have to think about this more and test.
+        //
+        // TODO: Takes generic type representing different variations of deserialized stream data,
+        // matches data elements to log variables and calls logs with correct methods based on msg
+        // data components. Adding TODO for implementation tomorrow morning.
     }
 }
 
@@ -75,16 +83,64 @@ impl RawFunc {
     }
 }
 #[derive(Eq, PartialEq, Hash)]
-enum LogMsg {
-    Event(EventTypes),
-    Warning,
-    Info,
-    Error,
+//NOTE: these fields on LogMsg are testing examples, need to change inputs before adding to trade
+//execution platform
+enum LogMsg<'a> {
+    Event(EventTypes<'a>),
+    Warning {
+        warning_message: &'a str,
+    },
+    Info {
+        timestamp: &'a str,
+        details: &'a str,
+    },
+    Error {
+        error_code: i32,
+        error_message: &'a str,
+    },
+}
+impl<'a> LogMsg<'a> {
+    fn format(&self) -> String {
+        match self {
+            LogMsg::Error {
+                error_code,
+                error_message,
+            } => {
+                format!("Error {}: {}", error_code, error_message)
+            }
+            LogMsg::Warning { warning_message } => {
+                format!("Warning:  {}", warning_message)
+            }
+            LogMsg::Info { timestamp, details } => {
+                format!("[{}] Info: {}", timestamp, details)
+            }
+            LogMsg::Event(_) => {
+                todo!();
+                // match to eventtypes
+            }
+        }
+    }
 }
 
 #[derive(Eq, PartialEq, Hash)]
-enum EventTypes {
-    OrderBookUpdate,
-    TradeUpdate,
+enum EventTypes<'a> {
+    MarketOrderBookUpdate {
+        symbol: &'a str,
+        bids: Vec<[String; 2]>,
+        asks: Vec<[String; 2]>,
+        event_timestamp: &'a str,
+    },
+    MarketTradesUpdate {
+        symbol: &'a str,
+        side: &'a str,
+        qty: &'a str,
+        fill_price: &'a str,
+        timestamp: &'a str,
+    },
     LimitFill,
+    MarketFill,
+    PositionStatus,
 }
+
+// method block on LogMsg to instantiate each msg type, then matching function to take data from
+// WS stream or trade engine and log based on the input formatting -> LogMsg enum -> logger. Or add output from trade engine methods that directly ouputst he LogMsg type and sends to logger
