@@ -5,6 +5,9 @@ use lockfree::channel::spsc::{create, Receiver, Sender};
 use std::collections::HashMap;
 use std::thread;
 
+// Lock Free concurrent logging with compile time Log messages instead of passing Strings or some other type
+// around the threads for formatting/logging.
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let async_logging = async_logging_thread().await;
