@@ -1,0 +1,15 @@
+[package]
+name = "lock_free_logging"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.79"
+chrono = "0.4.31"
+core_affinity = "0.8.1"
+lockfree = "0.5.1"
+prelude = "0.2.1"
+serde = { version = "1.0.195", features = ["derive"] }
+tokio = { version = "1.35.1", features = ["full"] }
