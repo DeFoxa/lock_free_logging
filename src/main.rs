@@ -13,21 +13,29 @@ use std::thread;
 #[tokio::main]
 async fn main() -> Result<()> {
     async_logging_thread().await;
-    let ts = Utc::now().timestamp_millis().to_string();
-    let warning_message = "test owned message".to_string();
+
     let data = OwnedEventType::MarketTradeData {
         symbol: ("BTCUSDT".to_string()),
         side: ("BUY".to_string()),
         qty: (1000),
         fill_price: (29000.69),
-        timestamp: (ts),
+        timestamp: (Utc::now().timestamp_millis().to_string()),
     };
 
+    //NOTE Example directly to log_thread
     let message = Arc::new(OwnedLogMsg::Event(data));
-
-    // test(&message).await;
-
     async_logging_thread_with_message::<OwnedLogMsg>(message).await;
+
+    //NOTE example processed from struct type to LogMsg -> thread with usage_example function
+    let trade_data = ExampleTradeStream {
+        symbol: "BTCUSDT".to_string(),
+        side: "buy".to_string(),
+        qty: 1,
+        price: 46030.50,
+        timestamp: Utc::now().timestamp_millis().to_string(),
+    };
+
+    usage_example::<ExampleTradeStream>(trade_data.into()).await;
 
     Ok(())
 }
@@ -76,10 +84,10 @@ where
 
     Ok(())
 }
-async fn usage_example<G: Clone + Send + Sync + Formattable + 'static>(
-    message: Arc<G>,
-) -> Result<()> {
-    async_logging_thread_with_message::<G>(message).await;
+
+async fn usage_example<G: Clone + Send + Sync + ToLogMsg + 'static>(message: G) -> Result<()> {
+    let log = message.to_log_msg();
+    async_logging_thread_with_message::<OwnedLogMsg>(Arc::new(log.clone())).await;
     Ok(())
 }
 struct Logger<'a> {
@@ -133,6 +141,11 @@ impl RawFunc {
 //
 trait Formattable {
     fn formatting(&self) -> String;
+}
+// trait to implement on deserialized stream data structs, formats the struct fields into LogMsg to
+// be passed to async_logging_thread
+trait ToLogMsg {
+    fn to_log_msg(self) -> OwnedLogMsg;
 }
 
 struct OwnedDataLogger {
@@ -325,12 +338,54 @@ enum EventTypes<'a> {
         time_since_fill: &'a str,
     },
 }
+// below are examples of possible structs on to which fn to_log_msg will be impl.
+// NOTE: future implementations of lock_free_logger will require structuring deserialized stream
+// data and error messages to LogMsg enum. using owned types for simplicity
+#[derive(Debug, Clone)]
+struct ExampleTradeStream {
+    symbol: String,
+    side: String,
+    qty: i32,
+    price: f64,
+    timestamp: String,
+}
+impl ToLogMsg for ExampleTradeStream {
+    fn to_log_msg(self) -> OwnedLogMsg {
+        OwnedLogMsg::Event(OwnedEventType::MarketTradeData {
+            symbol: self.symbol,
+            side: self.side,
+            qty: self.qty,
+            fill_price: self.price,
+            timestamp: self.timestamp,
+        })
+    }
+}
+// Example of error message type to implement S
+#[derive(Debug, Clone)]
+struct ExampleErrorMsg {
+    error_code: i32,
+    error_message: String,
+}
+impl ToLogMsg for ExampleErrorMsg {
+    fn to_log_msg(self) -> OwnedLogMsg {
+        OwnedLogMsg::Error {
+            error_code: self.error_code,
+            error_message: self.error_message,
+        }
+    }
+}
 
 // TESTING
 #[derive(Debug, PartialEq, Clone)]
 enum OwnedLogMsg {
     Event(OwnedEventType),
-    Warning { warning_message: String },
+    Warning {
+        warning_message: String,
+    },
+    Error {
+        error_code: i32,
+        error_message: String,
+    },
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -359,6 +414,10 @@ impl OwnedLogMsg {
                     symbol, side, qty, fill_price, timestamp
                 ),
             },
+            OwnedLogMsg::Error {
+                error_code,
+                error_message,
+            } => format!("Error code {}, Message {}", error_code, error_message),
         }
     }
 }
@@ -379,6 +438,10 @@ impl Formattable for OwnedLogMsg {
                 ),
                 // match to eventtypes
             },
+            OwnedLogMsg::Error {
+                error_code,
+                error_message,
+            } => format!("Error Code: {}, Message {}", error_code, error_message),
         }
     }
 }
