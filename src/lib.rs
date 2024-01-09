@@ -20,9 +20,22 @@ pub async fn async_logging_thread() -> Result<()> {
 
     /* Implementation Example */
     let logger = Logger::new();
-    let log_message = LogMsg::Warning {
-        warning_message: "testing_message",
-    };
+    let ts = Utc::now().timestamp_millis();
+
+    //NOTE commented example for LogMsg::Warning
+
+    // let log_message = LogMsg::Warning {
+    //     warning_message: "testing_message",
+    // };
+    // let ts_str: &str = ts;
+
+    let log_message = LogMsg::Event(EventTypes::MarketTradesUpdate {
+        symbol: "BTCUSDT",
+        side: "buy",
+        qty: "1",
+        fill_price: "46030.50",
+        timestamp: ts,
+    });
     let raw_func = RawFunc::new(move || logger.log(log_message.clone()));
     sx.send(raw_func);
 
@@ -55,7 +68,7 @@ where
 
 pub async fn usage_example<G: Clone + Send + Sync + ToLogMsg + 'static>(message: G) -> Result<()> {
     let log = message.to_log_msg();
-    async_logging_thread_with_message::<OwnedLogMsg>(Arc::new(log.clone())).await;
+    // async_logging_thread_with_message::<OwnedLogMsg>(Arc::new(log.clone())).await;
     Ok(())
 }
 pub struct Logger<'a> {
@@ -69,11 +82,11 @@ impl<'a> Logger<'a> {
     }
     fn log(&self, message: LogMsg) {
         let formatted_msg = message.format();
-        println!("{:?}", formatted_msg);
+        // println!("{:?}", formatted_msg);
     }
     fn log_with_arc(&self, message: &Arc<LogMsg>) {
         let formatted_msg = message.format();
-        println!("{:?}", formatted_msg);
+        // println!("{:?}", formatted_msg);
     }
     fn log_from_deserialized_generic<T>(&self, message: &T) {
         // Not sure if this will work from a performance standpoint, may have to seperate streams and call specific log method on msg relative to deserialized stream message type, have to think about this more and test.
@@ -127,11 +140,11 @@ impl OwnedDataLogger {
     }
     fn log(&self, message: LogMsg) {
         let formatted_msg = message.format();
-        println!("{:?}", formatted_msg);
+        // println!("{:?}", formatted_msg);
     }
     fn log_with_arc<G: Clone + Formattable>(&self, message: &Arc<G>) {
         let formatted_msg = message.as_ref().formatting();
-        println!("{:?}", formatted_msg);
+        // println!("{:?}", formatted_msg);
     }
 }
 
@@ -158,7 +171,7 @@ where
     fn log_with_context(&self) {
         // self.logger.log_with_arc(&Arc::clone(&self.log_message));
         let formatted = self.log_message.formatting();
-        println!("{:?}", formatted);
+        // println!("{:?}", formatted);
     }
 }
 
@@ -273,7 +286,7 @@ pub enum EventTypes<'a> {
         side: &'a str,
         qty: &'a str,
         fill_price: &'a str,
-        timestamp: &'a str,
+        timestamp: i64,
     },
     AccountPartialLimitFill {
         symbol: &'a str,
