@@ -3,14 +3,32 @@ use anyhow::Result;
 use chrono::{DateTime, Local, TimeZone, Utc};
 use lockfree::channel::spsc::{create, Receiver, Sender};
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::thread;
 
-// Lock Free concurrent logging with compile time Log messages instead of passing Strings or some other type
+//NOTE: Lock Free concurrent logging with compile time Log messages instead of passing Strings or some other type
 // around the threads for formatting/logging.
+//NOTE:
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let async_logging = async_logging_thread().await;
+    async_logging_thread().await;
+    let ts = Utc::now().timestamp_millis().to_string();
+    let warning_message = "test owned message".to_string();
+    let data = OwnedEventType::MarketTradeData {
+        symbol: ("BTCUSDT".to_string()),
+        side: ("BUY".to_string()),
+        qty: (1000),
+        fill_price: (29000.69),
+        timestamp: (ts),
+    };
+
+    let message = Arc::new(OwnedLogMsg::Event(data));
+
+    // test(&message).await;
+
+    async_logging_thread_with_message::<OwnedLogMsg>(message).await;
+
     Ok(())
 }
 
@@ -24,8 +42,8 @@ async fn async_logging_thread() -> Result<()> {
         }
     });
 
+    /* Implementation Example */
     let logger = Logger::new();
-
     let log_message = LogMsg::Warning {
         warning_message: "testing_message",
     };
@@ -35,6 +53,35 @@ async fn async_logging_thread() -> Result<()> {
     Ok(())
 }
 
+async fn async_logging_thread_with_message<G>(log_message: Arc<G>) -> Result<()>
+where
+    G: Clone + Send + Sync + Formattable + 'static,
+{
+    let (mut sx, mut rx) = create::<RawFunc>();
+    let guard = thread::spawn(move || {
+        let core_ids = core_affinity::get_core_ids().unwrap();
+        core_affinity::set_for_current(*core_ids.last().unwrap());
+        while let Ok(raw_func) = rx.recv() {
+            raw_func.invoke();
+        }
+    });
+
+    let logger = OwnedDataLogger::new();
+    let logger_context = LoggerWithContext::new(logger, log_message);
+    let raw_func = RawFunc::new(move || {
+        logger_context.log_with_context();
+    });
+
+    sx.send(raw_func);
+
+    Ok(())
+}
+async fn usage_example<G: Clone + Send + Sync + Formattable + 'static>(
+    message: Arc<G>,
+) -> Result<()> {
+    async_logging_thread_with_message::<G>(message).await;
+    Ok(())
+}
 struct Logger<'a> {
     formats: HashMap<LogMsg<'a>, String>,
 }
@@ -48,6 +95,10 @@ impl<'a> Logger<'a> {
         let formatted_msg = message.format();
         println!("{:?}", formatted_msg);
     }
+    fn log_with_arc(&self, message: &Arc<LogMsg>) {
+        let formatted_msg = message.format();
+        println!("{:?}", formatted_msg);
+    }
     fn log_from_deserialized_generic<T>(&self, message: &T) {
         // Not sure if this will work from a performance standpoint, may have to seperate streams and call specific log method on msg relative to deserialized stream message type, have to think about this more and test.
         //
@@ -57,8 +108,9 @@ impl<'a> Logger<'a> {
     }
 }
 
+// RawFunc: lock-free fn pointer
 struct RawFunc {
-    closure: Box<dyn Fn() + Send + 'static>,
+    func: Box<dyn Fn() + Send + 'static>,
 }
 
 impl RawFunc {
@@ -66,17 +118,69 @@ impl RawFunc {
     where
         T: Fn() + Send + 'static,
     {
-        return RawFunc {
-            closure: Box::new(data),
-        };
+        RawFunc {
+            func: Box::new(data),
+        }
     }
     fn invoke(self) {
-        (self.closure)()
+        (self.func)()
     }
 }
-//NOTE: these fields on LogMsg are testing examples, need to change inputs before adding to trade
-//execution platform
+
 //
+//NOTE: These fields on LogMsg are testing examples, need to change inputs to match real data
+//fields before adding to trade execution platform
+//
+trait Formattable {
+    fn formatting(&self) -> String;
+}
+
+struct OwnedDataLogger {
+    formats: HashMap<OwnedLogMsg, String>,
+}
+impl OwnedDataLogger {
+    fn new() -> Self {
+        Self {
+            formats: HashMap::new(),
+        }
+    }
+    fn log(&self, message: LogMsg) {
+        let formatted_msg = message.format();
+        println!("{:?}", formatted_msg);
+    }
+    fn log_with_arc<G: Clone + Formattable>(&self, message: &Arc<G>) {
+        let formatted_msg = message.as_ref().formatting();
+        println!("{:?}", formatted_msg);
+    }
+}
+
+struct LoggerWithContext<G>
+where
+    G: Clone + Send + Sync + Formattable,
+{
+    logger: OwnedDataLogger,
+    log_message: Arc<G>,
+}
+impl<G> LoggerWithContext<G>
+where
+    G: Clone + Send + Sync + Formattable,
+{
+    fn new(logger: OwnedDataLogger, log_message: Arc<G>) -> Self
+    where
+        G: Clone + Send + Sync,
+    {
+        LoggerWithContext {
+            logger,
+            log_message,
+        }
+    }
+    fn log_with_context(&self) {
+        // self.logger.log_with_arc(&Arc::clone(&self.log_message));
+        let formatted = self.log_message.formatting();
+        println!("{:?}", formatted);
+    }
+}
+
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 enum LogMsg<'a> {
     Event(EventTypes<'a>),
@@ -107,14 +211,74 @@ impl<'a> LogMsg<'a> {
             LogMsg::Info { timestamp, details } => {
                 format!("[{}] Info: {}", timestamp, details)
             }
-            LogMsg::Event(_) => {
-                todo!();
+            LogMsg::Event(event_types) => {
+                match event_types {
+                    EventTypes::MarketOrderBookUpdate {
+                        symbol,
+                        bids,
+                        asks,
+                        event_timestamp,
+                    } => format!(
+                        "MarketOrderBookUpdate - symbol: {}, bids {:?}, asks {:?}, event_timestamp {}",
+                        symbol, bids, asks, event_timestamp
+                    ),
+                    EventTypes::MarketTradesUpdate {
+                        symbol,
+                        side,
+                        qty,
+                        fill_price,
+                        timestamp,
+                    } => format!(
+                        "MarketTradesUpdate - symbol: {}, side: {}, qty: {}, fill_price: {}, timestamp: {}", 
+                        symbol, side, qty, fill_price, timestamp),
+                    EventTypes::AccountPartialLimitFill {
+                        symbol,
+                        side,
+                        price,
+                        size_filled,
+                        size_unfilled,
+                        timestamp,
+                    } => format!(
+                        "AccountPartialLimitFill - symbol: {}, side: {}, price: {}, size_filled: {}, size_unfilled: {}, timestamp: {}",
+                        symbol, side, price, size_unfilled, size_filled, timestamp),
+                    EventTypes::AccountLimitFill {
+                        symbol,
+                        side,
+                        fill_price,
+                        qty,
+                        timestamp,
+                    } => format!(
+                        "AccountLimitFill - symbol: {}, side: {}, fill_price: {}, qty: {}, timestamp: {}", 
+                        symbol, side, fill_price, qty, timestamp),
+                    EventTypes::AccountMarketFill {
+                        symbol,
+                        side,
+                        qty,
+                        fill_price,
+                        timestamp,
+                    } => format!(
+                        "AccountMarketFill - symbol: {}, side: {}, qty: {}, fill_price: {}, timestamp: {}",
+                        symbol, side, qty, fill_price, timestamp),
+                    EventTypes::AccountPositionStatus {
+                        symbol,
+                        side,
+                        pnl,
+                        leverage,
+                        fill_timestamp,
+                        time_since_fill,
+                    } => format!(
+                        "AccountPositionStatus - symbol: {}, side: {}, pnl: {}, leverage: {}, fill_timestamp: {}, time_since_fill: {} ",
+                        symbol, side, pnl, leverage, fill_timestamp, time_since_fill,
+                    ),
+                }
+
                 // match to eventtypes
             }
         }
     }
 }
 
+//NOTE: Example implementation: these field(s) and field types will change based on Deserialized stream data
 #[derive(Eq, PartialEq, Hash, Debug, Clone)]
 enum EventTypes<'a> {
     MarketOrderBookUpdate {
@@ -130,9 +294,93 @@ enum EventTypes<'a> {
         fill_price: &'a str,
         timestamp: &'a str,
     },
-    LimitFill,
-    MarketFill,
-    PositionStatus,
+    AccountPartialLimitFill {
+        symbol: &'a str,
+        side: &'a str,
+        price: &'a str,
+        size_filled: &'a str,
+        size_unfilled: &'a str,
+        timestamp: &'a str,
+    },
+    AccountLimitFill {
+        symbol: &'a str,
+        side: &'a str,
+        fill_price: &'a str,
+        qty: &'a str,
+        timestamp: &'a str,
+    },
+    AccountMarketFill {
+        symbol: &'a str,
+        side: &'a str,
+        qty: &'a str,
+        fill_price: &'a str,
+        timestamp: &'a str,
+    },
+    AccountPositionStatus {
+        symbol: &'a str,
+        side: &'a str,
+        pnl: &'a str,
+        leverage: &'a str,
+        fill_timestamp: &'a str,
+        time_since_fill: &'a str,
+    },
+}
+
+// TESTING
+#[derive(Debug, PartialEq, Clone)]
+enum OwnedLogMsg {
+    Event(OwnedEventType),
+    Warning { warning_message: String },
+}
+
+#[derive(Debug, PartialEq, Clone)]
+enum OwnedEventType {
+    MarketTradeData {
+        symbol: String,
+        side: String,
+        qty: i32,
+        fill_price: f64,
+        timestamp: String,
+    },
+}
+impl OwnedLogMsg {
+    fn format(&self) -> String {
+        match self {
+            OwnedLogMsg::Warning { warning_message } => format!("warning: {}", warning_message),
+            OwnedLogMsg::Event(data) => match data {
+                OwnedEventType::MarketTradeData {
+                    symbol,
+                    side,
+                    qty,
+                    fill_price,
+                    timestamp,
+                } => format!(
+                    "TradeData - symbol: {}, side: {}, qty: {}, fill_price: {}, timestamp: {}",
+                    symbol, side, qty, fill_price, timestamp
+                ),
+            },
+        }
+    }
+}
+impl Formattable for OwnedLogMsg {
+    fn formatting(&self) -> String {
+        match self {
+            OwnedLogMsg::Warning { warning_message } => format!("warning: {}", warning_message),
+            OwnedLogMsg::Event(data) => match data {
+                OwnedEventType::MarketTradeData {
+                    symbol,
+                    side,
+                    qty,
+                    fill_price,
+                    timestamp,
+                } => format!(
+                    "TradeData - symbol: {}, side: {}, qty: {}, fill_price: {}, timestamp: {}",
+                    symbol, side, qty, fill_price, timestamp
+                ),
+                // match to eventtypes
+            },
+        }
+    }
 }
 
 // method block on LogMsg to instantiate each msg type, then matching function to take data from
