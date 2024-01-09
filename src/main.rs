@@ -11,8 +11,8 @@ use tokio::runtime::Runtime;
 
 mod lib;
 
-//NOTE: Lock Free concurrent logging with compile time Log messages instead of passing Strings or some other type
-// around the threads for formatting/logging.
+//NOTE: Lock Free concurrent logging with LogMsg types, includes Struct type into LogMsg. Benchmarking with Criterion set up. Think there are a
+// few things that can be optimized before implementing, but this provides the general framework of the logger. Bench with custom serializer against to_log_msg methods
 
 #[tokio::main]
 async fn main() -> Result<()> {
