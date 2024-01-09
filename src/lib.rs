@@ -88,12 +88,9 @@ impl<'a> Logger<'a> {
         let formatted_msg = message.format();
         println!("{:?}", formatted_msg);
     }
-    fn log_from_deserialized_generic<T>(&self, message: &T) {
-        // Not sure if this will work from a performance standpoint, may have to seperate streams and call specific log method on msg relative to deserialized stream message type, have to think about this more and test.
-        //
-        // TODO: Takes generic type representing different variations of deserialized stream data,
-        // matches data elements to log variables and calls logs with correct methods based on msg
-        // data components.
+    fn log_formatting(&self, message: OwnedLogMsg) {
+        let formatted_msg = message.formatting();
+        println!("{:?}", formatted_msg);
     }
 }
 

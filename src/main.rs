@@ -11,8 +11,9 @@ use tokio::runtime::Runtime;
 
 mod lib;
 
-//NOTE: Lock Free concurrent logging with LogMsg types, includes Struct type into LogMsg. Benchmarking with Criterion set up. Think there are a
-// few things that can be optimized before implementing, but this provides the general framework of the logger. Bench with custom serializer against to_log_msg methods
+//NOTE: A few Examples of Lock Free concurrent logging for  implementation later: includes types LogMsg/OwnedLogMsg types and Fn Pointer for async_thread closure, includes Struct type into LogMsg. Benchmarking with Criterion set up. Think there are a few things that can be optimized before implementing, but this provides the general framework of the logger. Bench with custom serializer against to_log_msg methods
+
+//NOTE: A few different variations of the logger in lib.rs, with owned data, with borrowed, with Formattable trait (and without), and with ToLogMsg::to_log_msg(): formattable trait added to pass types around as generics with attribute "Formattable" implemented on OwnedLogMsg (not implemented on LogMsg add to LogMsg for actual implementation), to_log_msg() trait/method for taking deserialized stream data or warn/error struct and convert to a log msg. Use as example code but update for consistency relative to implementation requirements.
 
 #[tokio::main]
 async fn main() -> Result<()> {
