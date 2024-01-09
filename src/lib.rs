@@ -82,11 +82,11 @@ impl<'a> Logger<'a> {
     }
     fn log(&self, message: LogMsg) {
         let formatted_msg = message.format();
-        // println!("{:?}", formatted_msg);
+        println!("{:?}", formatted_msg);
     }
     fn log_with_arc(&self, message: &Arc<LogMsg>) {
         let formatted_msg = message.format();
-        // println!("{:?}", formatted_msg);
+        println!("{:?}", formatted_msg);
     }
     fn log_from_deserialized_generic<T>(&self, message: &T) {
         // Not sure if this will work from a performance standpoint, may have to seperate streams and call specific log method on msg relative to deserialized stream message type, have to think about this more and test.
@@ -140,11 +140,11 @@ impl OwnedDataLogger {
     }
     fn log(&self, message: LogMsg) {
         let formatted_msg = message.format();
-        // println!("{:?}", formatted_msg);
+        println!("{:?}", formatted_msg);
     }
     fn log_with_arc<G: Clone + Formattable>(&self, message: &Arc<G>) {
         let formatted_msg = message.as_ref().formatting();
-        // println!("{:?}", formatted_msg);
+        println!("{:?}", formatted_msg);
     }
 }
 
@@ -171,7 +171,7 @@ where
     fn log_with_context(&self) {
         // self.logger.log_with_arc(&Arc::clone(&self.log_message));
         let formatted = self.log_message.formatting();
-        // println!("{:?}", formatted);
+        println!("{:?}", formatted);
     }
 }
 
