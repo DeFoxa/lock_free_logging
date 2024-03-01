@@ -222,7 +222,7 @@ impl<'a> LogMsg<'a> {
                     } => format!(
                         "MarketTradesUpdate - symbol: {}, side: {}, qty: {}, fill_price: {}, timestamp: {}", 
                         symbol, side, qty, fill_price, timestamp),
-                    EventTypes::AccountPartialLimitFill {
+                    EventTypes::AccountPartialMakerFill {
                         symbol,
                         side,
                         price,
@@ -230,25 +230,25 @@ impl<'a> LogMsg<'a> {
                         size_unfilled,
                         timestamp,
                     } => format!(
-                        "AccountPartialLimitFill - symbol: {}, side: {}, price: {}, size_filled: {}, size_unfilled: {}, timestamp: {}",
+                        "AccountPartialMakerFill - symbol: {}, side: {}, price: {}, size_filled: {}, size_unfilled: {}, timestamp: {}",
                         symbol, side, price, size_unfilled, size_filled, timestamp),
-                    EventTypes::AccountLimitFill {
+                    EventTypes::AccountMakerFill {
                         symbol,
                         side,
                         fill_price,
                         qty,
                         timestamp,
                     } => format!(
-                        "AccountLimitFill - symbol: {}, side: {}, fill_price: {}, qty: {}, timestamp: {}", 
+                        "AccountMakerFill - symbol: {}, side: {}, fill_price: {}, qty: {}, timestamp: {}", 
                         symbol, side, fill_price, qty, timestamp),
-                    EventTypes::AccountMarketFill {
+                    EventTypes::AccountTakerFill {
                         symbol,
                         side,
                         qty,
                         fill_price,
                         timestamp,
                     } => format!(
-                        "AccountMarketFill - symbol: {}, side: {}, qty: {}, fill_price: {}, timestamp: {}",
+                        "AccountTakerFill - symbol: {}, side: {}, qty: {}, fill_price: {}, timestamp: {}",
                         symbol, side, qty, fill_price, timestamp),
                     EventTypes::AccountPositionStatus {
                         symbol,
@@ -285,7 +285,7 @@ pub enum EventTypes<'a> {
         fill_price: &'a str,
         timestamp: i64,
     },
-    AccountPartialLimitFill {
+    AccountPartialMakerFill {
         symbol: &'a str,
         side: &'a str,
         price: &'a str,
@@ -293,14 +293,14 @@ pub enum EventTypes<'a> {
         size_unfilled: &'a str,
         timestamp: &'a str,
     },
-    AccountLimitFill {
+    AccountMakerFill {
         symbol: &'a str,
         side: &'a str,
         fill_price: &'a str,
         qty: &'a str,
         timestamp: &'a str,
     },
-    AccountMarketFill {
+    AccountTakerFill {
         symbol: &'a str,
         side: &'a str,
         qty: &'a str,
