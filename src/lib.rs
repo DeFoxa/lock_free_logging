@@ -44,7 +44,7 @@ pub async fn async_logging_thread() -> Result<()> {
 
 pub async fn async_logging_thread_with_message<G>(log_message: Arc<G>) -> Result<()>
 where
-    G: Clone + Send + Sync + Formattable + 'static,
+    G: Formattable + Clone + Send + Sync + 'static,
 {
     let (mut sx, mut rx) = create::<RawFunc>();
     let guard = thread::spawn(move || {
@@ -71,28 +71,6 @@ pub async fn usage_example<G: Clone + Send + Sync + ToLogMsg + 'static>(message:
     // async_logging_thread_with_message::<OwnedLogMsg>(Arc::new(log.clone())).await;
     Ok(())
 }
-pub struct Logger<'a> {
-    formats: HashMap<LogMsg<'a>, String>,
-}
-impl<'a> Logger<'a> {
-    fn new() -> Self {
-        Self {
-            formats: HashMap::new(),
-        }
-    }
-    fn log(&self, message: LogMsg) {
-        let formatted_msg = message.format();
-        println!("{:?}", formatted_msg);
-    }
-    fn log_with_arc(&self, message: &Arc<LogMsg>) {
-        let formatted_msg = message.format();
-        println!("{:?}", formatted_msg);
-    }
-    fn log_formatting(&self, message: OwnedLogMsg) {
-        let formatted_msg = message.formatting();
-        println!("{:?}", formatted_msg);
-    }
-}
 
 // RawFunc: lock-free fn pointer
 pub struct RawFunc {
@@ -113,15 +91,32 @@ impl RawFunc {
     }
 }
 
-//
-//NOTE: These fields on LogMsg are testing examples, need to change inputs to match real data
-//fields before adding to trade execution platform
-//
+pub struct Logger<'a> {
+    formats: HashMap<LogMsg<'a>, String>,
+}
+impl<'a> Logger<'a> {
+    fn new() -> Self {
+        Self {
+            formats: HashMap::new(),
+        }
+    }
+    fn log(&self, message: LogMsg) {
+        let formatted_msg = message.format();
+        // println!("{:?}", formatted_msg);
+    }
+    fn log_with_arc(&self, message: &Arc<LogMsg>) {
+        let formatted_msg = message.format();
+        // println!("{:?}", formatted_msg);
+    }
+    fn log_formatting(&self, message: OwnedLogMsg) {
+        let formatted_msg = message.formatting();
+        // println!("{:?}", formatted_msg);
+    }
+}
 trait Formattable {
     fn formatting(&self) -> String;
 }
-// trait to implement on deserialized stream data pub structs, formats the struct fields into LogMsg to
-// be passed to async_logging_thread
+
 trait ToLogMsg {
     fn to_log_msg(self) -> OwnedLogMsg;
 }
@@ -137,11 +132,11 @@ impl OwnedDataLogger {
     }
     fn log(&self, message: LogMsg) {
         let formatted_msg = message.format();
-        println!("{:?}", formatted_msg);
+        // println!("{:?}", formatted_msg);
     }
     fn log_with_arc<G: Clone + Formattable>(&self, message: &Arc<G>) {
         let formatted_msg = message.as_ref().formatting();
-        println!("{:?}", formatted_msg);
+        // println!("{:?}", formatted_msg);
     }
 }
 
@@ -154,7 +149,7 @@ where
 }
 impl<G> LoggerWithContext<G>
 where
-    G: Clone + Send + Sync + Formattable,
+    G: Formattable + Clone + Send + Sync,
 {
     fn new(logger: OwnedDataLogger, log_message: Arc<G>) -> Self
     where
@@ -168,7 +163,7 @@ where
     fn log_with_context(&self) {
         // self.logger.log_with_arc(&Arc::clone(&self.log_message));
         let formatted = self.log_message.formatting();
-        println!("{:?}", formatted);
+        //println!("{:?}", formatted);
     }
 }
 
