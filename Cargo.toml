@@ -3,6 +3,10 @@ name = "lock_free_logging"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "lib"
+path = "src/lib.rs"
+
 [[bench]]
 name = "my_benchmark"
 harness = false
@@ -15,8 +19,6 @@ criterion = { version = "0.5.1", features = ["async", "tokio", "html_reports", "
 anyhow = "1.0.79"
 chrono = "0.4.31"
 core_affinity = "0.8.1"
-# criterion = { version = "0.5.1", features = ["async_futures", "async_tokio"] }
-# criterion = { version = "0.5.1", features = ["async", "tokio", "async_tokio"] }
 lockfree = "0.5.1"
 prelude = "0.2.1"
 serde = { version = "1.0.195", features = ["derive"] }
