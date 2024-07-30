@@ -1,6 +1,6 @@
 #![allow(warnings)]
-use anyhow::Result;
 use chrono::Utc;
+use eyre::Result;
 use lib::example_types::*;
 use lib::logger::*;
 use std::sync::Arc;
@@ -9,7 +9,7 @@ use std::sync::Arc;
 async fn main() -> Result<()> {
     //NOTE: Commented out print statements from the logger::Logger and logger::OwnedDataLogger methods log and log_with_context.
     //NOTE:Running --bin main will not print to stdout unless print uncommented
-
+    //
     let data = OwnedEventType::MarketTradeData {
         symbol: "BTCUSDT".to_string(),
         side: "BUY".to_string(),

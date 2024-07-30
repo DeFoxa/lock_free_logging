@@ -1,7 +1,7 @@
 #![allow(warnings)]
 use crate::example_types::{EventTypes, LogMsg, OwnedLogMsg};
-use anyhow::Result;
 use chrono::Utc;
+use eyre::Result;
 use lockfree::channel::spsc::create;
 use std::collections::HashMap;
 use std::sync::Arc;
