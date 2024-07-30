@@ -12,7 +12,7 @@
 - **Lock-Free Design**: `lock_free` crate for fifo spsc channels without 'wait-for-message' operation.
 
 ## Further Optimizations
-- The types as written in example_types, can and should be further optimized relative to use-case. The examples provided were chosen for simple testing of the logger system.
+- The types as written in example_types, can and should be further optimized relative to use-case. The examples provided were chosen for simple testing of the logging system.
     - Expanding usage of enum variations as a replacement for non-context specific strings/text within log messages
     - Where necessary and applicable, string interning
 
