@@ -16,9 +16,9 @@ harness = false
 criterion = { version = "0.5.1", features = ["async", "tokio", "html_reports", "async_futures", "async_tokio"] }
 
 [dependencies]
-anyhow = "1.0.79"
 chrono = "0.4.31"
 core_affinity = "0.8.1"
+eyre = "0.6.12"
 lockfree = "0.5.1"
 prelude = "0.2.1"
 serde = { version = "1.0.195", features = ["derive"] }
