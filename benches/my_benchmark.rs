@@ -13,12 +13,11 @@ async fn log_bench() {
 
 // Owned message passed to Logger
 async fn owned_log_msg_passed_to_logger_bench() {
-    let data = OwnedLogMsg::Event(OwnedEventType::MarketTradeData {
+    let data = OwnedLogMsg::Event(OwnedEventType::MarketOrderBookUpdate {
         symbol: "BTCUSDT".to_string(),
-        side: "buy".to_string(),
-        qty: 1,
-        fill_price: 46030.50,
-        timestamp: Utc::now().timestamp_millis(),
+        bids: vec![[100, 75]],
+        asks: vec![[101, 255]],
+        event_timestamp: Utc::now().timestamp_millis(),
     });
 
     let _ = async_logger::<OwnedLogMsg>(data.into()).await;
