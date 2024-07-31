@@ -3,7 +3,7 @@ use crate::logger::{Formattable, ToLogMsg};
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub enum LogMsg<'a> {
-    Event(EventTypes<'a>),
+    Event(NormalizedEventTypes<'a>),
     Warning {
         warning_message: &'static str,
     },
@@ -33,7 +33,7 @@ impl<'a> LogMsg<'a> {
             }
             LogMsg::Event(event_types) => {
                 match event_types {
-                    EventTypes::MarketOrderBookUpdate {
+                    NormalizedEventTypes::MarketOrderBookUpdate {
                         symbol,
                         bids,
                         asks,
@@ -42,16 +42,16 @@ impl<'a> LogMsg<'a> {
                         "MarketOrderBookUpdate - symbol: {}, bids {:?}, asks {:?}, event_timestamp {}",
                         symbol, bids, asks, event_timestamp
                     ),
-                    EventTypes::MarketTradesUpdate {
+                    NormalizedEventTypes::MarketTrade {
                         symbol,
                         side,
                         qty,
                         fill_price,
                         timestamp,
                     } => format!(
-                        "MarketTradesUpdate - symbol: {}, side: {}, qty: {}, fill_price: {}, timestamp: {}", 
+                        "MarketTrade - symbol: {}, side: {}, qty: {}, fill_price: {}, timestamp: {}", 
                         symbol, side, qty, fill_price, timestamp),
-                    EventTypes::AccountPartialMakerFill {
+                    NormalizedEventTypes::AccountPartialMakerFill {
                         symbol,
                         side,
                         price,
@@ -61,7 +61,7 @@ impl<'a> LogMsg<'a> {
                     } => format!(
                         "AccountPartialMakerFill - symbol: {}, side: {}, price: {}, size_filled: {}, size_unfilled: {}, timestamp: {}",
                         symbol, side, price, size_unfilled, size_filled, timestamp),
-                    EventTypes::AccountMakerFill {
+                    NormalizedEventTypes::AccountMakerFill {
                         symbol,
                         side,
                         fill_price,
@@ -70,7 +70,7 @@ impl<'a> LogMsg<'a> {
                     } => format!(
                         "AccountMakerFill - symbol: {}, side: {}, fill_price: {}, qty: {}, timestamp: {}", 
                         symbol, side, fill_price, qty, timestamp),
-                    EventTypes::AccountTakerFill {
+                    NormalizedEventTypes::AccountTakerFill {
                         symbol,
                         side,
                         qty,
@@ -79,7 +79,7 @@ impl<'a> LogMsg<'a> {
                     } => format!(
                         "AccountTakerFill - symbol: {}, side: {}, qty: {}, fill_price: {}, timestamp: {}",
                         symbol, side, qty, fill_price, timestamp),
-                    EventTypes::AccountPositionStatus {
+                    NormalizedEventTypes::AccountPositionStatus {
                         symbol,
                         side,
                         pnl,
@@ -100,14 +100,14 @@ impl<'a> LogMsg<'a> {
 
 //NOTE: Example implementation: these field(s) and field types will change based on Deserialized stream data
 #[derive(Eq, PartialEq, Hash, Debug, Clone)]
-pub enum EventTypes<'a> {
+pub enum NormalizedEventTypes<'a> {
     MarketOrderBookUpdate {
         symbol: &'a str,
-        bids: Vec<[String; 2]>,
-        asks: Vec<[String; 2]>,
-        event_timestamp: &'a str,
+        bids: Vec<[i64; 2]>,
+        asks: Vec<[i64; 2]>,
+        event_timestamp: i64,
     },
-    MarketTradesUpdate {
+    MarketTrade {
         symbol: &'a str,
         side: &'a str,
         qty: &'a str,
@@ -149,21 +149,19 @@ pub enum EventTypes<'a> {
 // NOTE: future implementations of lock_free_logger will require pub structuring deserialized stream
 // data and error messages to LogMsg enum. using owned types for simplicity
 #[derive(Debug, Clone)]
-pub struct ExampleTradeStream {
+pub struct ExampleOB {
     pub symbol: String,
-    pub side: String,
-    pub qty: i32,
-    pub price: f64,
+    pub bids: Vec<[i64; 2]>,
+    pub asks: Vec<[i64; 2]>,
     pub timestamp: i64,
 }
-impl ToLogMsg for ExampleTradeStream {
+impl ToLogMsg for ExampleOB {
     fn to_log_msg(self) -> OwnedLogMsg {
-        OwnedLogMsg::Event(OwnedEventType::MarketTradeData {
+        OwnedLogMsg::Event(OwnedEventType::MarketOrderBookUpdate {
             symbol: self.symbol,
-            side: self.side,
-            qty: self.qty,
-            fill_price: self.price,
-            timestamp: self.timestamp,
+            bids: self.bids,
+            asks: self.asks,
+            event_timestamp: self.timestamp,
         })
     }
 }
@@ -195,14 +193,14 @@ pub enum OwnedLogMsg {
     },
 }
 
+//example
 #[derive(Debug, PartialEq, Clone)]
 pub enum OwnedEventType {
-    MarketTradeData {
+    MarketOrderBookUpdate {
         symbol: String,
-        side: String,
-        qty: i32,
-        fill_price: f64,
-        timestamp: i64,
+        bids: Vec<[i64; 2]>,
+        asks: Vec<[i64; 2]>,
+        event_timestamp: i64,
     },
 }
 impl OwnedLogMsg {
@@ -210,15 +208,14 @@ impl OwnedLogMsg {
         match self {
             OwnedLogMsg::Warning { warning_message } => format!("warning: {}", warning_message),
             OwnedLogMsg::Event(data) => match data {
-                OwnedEventType::MarketTradeData {
+                OwnedEventType::MarketOrderBookUpdate {
                     symbol,
-                    side,
-                    qty,
-                    fill_price,
-                    timestamp,
+                    bids,
+                    asks,
+                    event_timestamp,
                 } => format!(
-                    "TradeData - symbol: {}, side: {}, qty: {}, fill_price: {}, timestamp: {}",
-                    symbol, side, qty, fill_price, timestamp
+                    "TradeData - symbol: {}, bids: {:?}, asks: {:?}, event_timestamp: {}",
+                    symbol, bids, asks, event_timestamp
                 ),
             },
             OwnedLogMsg::Error {
@@ -233,15 +230,14 @@ impl Formattable for OwnedLogMsg {
         match self {
             OwnedLogMsg::Warning { warning_message } => format!("warning: {}", warning_message),
             OwnedLogMsg::Event(data) => match data {
-                OwnedEventType::MarketTradeData {
+                OwnedEventType::MarketOrderBookUpdate {
                     symbol,
-                    side,
-                    qty,
-                    fill_price,
-                    timestamp,
+                    bids,
+                    asks,
+                    event_timestamp,
                 } => format!(
-                    "TradeData - symbol: {}, side: {}, qty: {}, fill_price: {}, timestamp: {}",
-                    symbol, side, qty, fill_price, timestamp
+                    "TradeData - symbol: {}, bids: {:?}, asks: {:?}, event_timestamp: {}",
+                    symbol, bids, asks, event_timestamp
                 ),
             },
             OwnedLogMsg::Error {

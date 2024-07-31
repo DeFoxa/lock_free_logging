@@ -1,5 +1,5 @@
 #![allow(warnings)]
-use crate::example_types::{EventTypes, LogMsg, OwnedLogMsg};
+use crate::example_types::{LogMsg, NormalizedEventTypes, OwnedLogMsg};
 use chrono::Utc;
 use eyre::Result;
 use lockfree::channel::spsc::create;
@@ -140,16 +140,14 @@ pub async fn async_logging_thread() -> Result<()> {
     //NOTE commented example for LogMsg::Warning
 
     // let log_message = LogMsg::Warning {
-    //     warning_message: "testing_message",
+    //     warning_message: "test warning message",
     // };
-    // let ts_str: &str = ts;
 
-    let log_message = LogMsg::Event(EventTypes::MarketTradesUpdate {
-        symbol: "BTCUSDT",
-        side: "buy",
-        qty: "1",
-        fill_price: "46030.50",
-        timestamp: ts,
+    let log_message = LogMsg::Event(NormalizedEventTypes::MarketOrderBookUpdate {
+        symbol: "Example-Ticker",
+        bids: vec![[100, 75]],
+        asks: vec![[101, 255]],
+        event_timestamp: ts,
     });
     let raw_func = RawFunc::new(move || logger.log(&log_message));
     sx.send(raw_func);
