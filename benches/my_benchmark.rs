@@ -1,8 +1,9 @@
 use chrono::Utc;
 use criterion::async_executor::FuturesExecutor;
 use criterion::{criterion_group, criterion_main, Criterion};
+use lib::enum_logger::*;
 use lib::example_types::*;
-use lib::logger::*;
+use lib::raw_func_logger::*;
 
 //NOTE: Bench prints
 //
