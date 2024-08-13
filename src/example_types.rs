@@ -1,5 +1,5 @@
 #![allow(warnings)]
-use crate::logger::{Formattable, ToLogMsg};
+use crate::raw_func_logger::{Formattable, ToLogMsg};
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub enum LogMsg<'a> {
