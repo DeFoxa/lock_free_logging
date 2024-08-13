@@ -1,7 +1,7 @@
 use chrono::Utc;
 use criterion::async_executor::FuturesExecutor;
 use criterion::{criterion_group, criterion_main, Criterion};
-use lib::enum_logger::*;
+use lib::enum_logger::enum_logger;
 use lib::example_types::*;
 use lib::raw_func_logger::*;
 
@@ -10,6 +10,16 @@ use lib::raw_func_logger::*;
 // Bench Logging the LogMsg with enum defined in logging function
 async fn log_bench() {
     let _ = async_logging_thread().await;
+}
+
+async fn enum_log_bench() {
+    let ob_update: ExampleOB = ExampleOB {
+        symbol: "BTCUSDT".to_string(),
+        bids: vec![[100, 75]],
+        asks: vec![[101, 255]],
+        timestamp: Utc::now().timestamp_millis(),
+    };
+    enum_logger(ob_update).await;
 }
 
 // Owned message passed to Logger
@@ -31,6 +41,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("OwnedLogmsg passed to logger", |b| {
         b.to_async(FuturesExecutor)
             .iter(|| owned_log_msg_passed_to_logger_bench());
+    });
+    c.bench_function("Simple Enum", |b| {
+        b.to_async(FuturesExecutor).iter(|| enum_log_bench());
     });
 }
 criterion_group!(benches, criterion_benchmark);
