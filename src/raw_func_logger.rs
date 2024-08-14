@@ -38,30 +38,6 @@ impl RawFuncLogger {
         Ok(())
     }
 }
-// pub async fn async_logger<G>(log_message: Arc<G>) -> Result<()>
-// where
-//     G: Formattable + Clone + Send + Sync + 'static,
-// {
-//     let (mut sx, mut rx) = create::<RawFunc>();
-//     thread::spawn(move || {
-//         let core_ids = core_affinity::get_core_ids().unwrap();
-//         core_affinity::set_for_current(*core_ids.last().unwrap());
-//         while let Ok(raw_func) = rx.recv() {
-//             raw_func.invoke();
-//         }
-//     });
-//
-//     let logger = OwnedDataLogger::new();
-//     let logger_context = LoggerWithContext::new(logger, log_message);
-//     let raw_func = RawFunc::new(move || {
-//         logger_context.log_with_context();
-//     });
-//
-//     sx.send(raw_func);
-//
-//     Ok(())
-// }
-
 // RawFunc: lock-free fn pointer
 pub struct RawFunc {
     func: Box<dyn Fn() + Send + 'static>,
