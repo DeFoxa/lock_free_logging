@@ -1,18 +1,29 @@
-use crate::example_types::ExampleOB;
+use crate::{example_types::ExampleOB, raw_func_logger::Formattable};
 use lockfree::channel::spsc::{create, Receiver, Sender};
 use std::thread;
 
-pub async fn enum_logger(event: ExampleOB) {
-    let (mut tx, mut rx) = create::<ExampleOB>();
+pub struct EnumLogger<EnumType: Formattable> {
+    sender: Sender<EnumType>,
+}
 
-    let guard = thread::spawn(move || {
-        let core_ids = core_affinity::get_core_ids().unwrap();
-        core_affinity::set_for_current(*core_ids.last().unwrap());
+impl<EnumType: Formattable + Send + 'static> EnumLogger<EnumType> {
+    pub fn new() -> Self {
+        let (mut tx, mut rx) = create::<EnumType>();
 
-        // match (rx.recv()) {
-        //     Ok(msg) => println!("ob update received"),
-        //     Err(e) => panic!("receive error "),
-        // }
-    });
-    tx.send(event);
+        let guard = thread::spawn(move || {
+            let core_ids = core_affinity::get_core_ids().unwrap();
+            core_affinity::set_for_current(*core_ids.last().unwrap());
+
+            match (rx.recv()) {
+                Ok(msg) => println!("ob update received"),
+                Err(e) => panic!("receive error "),
+            }
+        });
+
+        EnumLogger { sender: tx }
+    }
+
+    pub async fn log(&mut self, msg: EnumType) {
+        self.sender.send(msg);
+    }
 }
