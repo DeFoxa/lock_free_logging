@@ -8,7 +8,7 @@ name = "lib"
 path = "src/lib.rs"
 
 [[bench]]
-name = "my_benchmark"
+name = "custom_bench"
 harness = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -19,6 +19,7 @@ criterion = { version = "0.5.1", features = ["async", "tokio", "html_reports", "
 chrono = "0.4.31"
 core_affinity = "0.8.1"
 eyre = "0.6.12"
+futures = { version = "0.3.30", features = ["executor"] }
 lockfree = "0.5.1"
 prelude = "0.2.1"
 serde = { version = "1.0.195", features = ["derive"] }
