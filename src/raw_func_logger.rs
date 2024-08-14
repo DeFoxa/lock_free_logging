@@ -2,34 +2,65 @@
 use crate::example_types::{LogMsg, NormalizedEventTypes, OwnedLogMsg};
 use chrono::Utc;
 use eyre::Result;
-use lockfree::channel::spsc::create;
+use lockfree::channel::spsc::{create, Receiver, Sender};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::thread;
 
-pub async fn async_logger<G>(log_message: Arc<G>) -> Result<()>
-where
-    G: Formattable + Clone + Send + Sync + 'static,
-{
-    let (mut sx, mut rx) = create::<RawFunc>();
-    thread::spawn(move || {
-        let core_ids = core_affinity::get_core_ids().unwrap();
-        core_affinity::set_for_current(*core_ids.last().unwrap());
-        while let Ok(raw_func) = rx.recv() {
-            raw_func.invoke();
-        }
-    });
-
-    let logger = OwnedDataLogger::new();
-    let logger_context = LoggerWithContext::new(logger, log_message);
-    let raw_func = RawFunc::new(move || {
-        logger_context.log_with_context();
-    });
-
-    sx.send(raw_func);
-
-    Ok(())
+pub struct RawFuncLogger {
+    sender: Sender<RawFunc>,
 }
+
+impl RawFuncLogger {
+    pub fn new() -> Self {
+        let (mut sx, mut rx) = create::<RawFunc>();
+        thread::spawn(move || {
+            let core_ids = core_affinity::get_core_ids().unwrap();
+            core_affinity::set_for_current(*core_ids.last().unwrap());
+            while let Ok(raw_func) = rx.recv() {
+                raw_func.invoke();
+            }
+        });
+        RawFuncLogger { sender: sx }
+    }
+
+    pub async fn log<G>(&mut self, log_message: Arc<G>) -> Result<()>
+    where
+        G: Formattable + Clone + Send + Sync + 'static,
+    {
+        let logger = OwnedDataLogger::new();
+        let logger_context = LoggerWithContext::new(logger, log_message);
+        let raw_func = RawFunc::new(move || {
+            logger_context.log_with_context();
+        });
+
+        self.sender.send(raw_func);
+        Ok(())
+    }
+}
+// pub async fn async_logger<G>(log_message: Arc<G>) -> Result<()>
+// where
+//     G: Formattable + Clone + Send + Sync + 'static,
+// {
+//     let (mut sx, mut rx) = create::<RawFunc>();
+//     thread::spawn(move || {
+//         let core_ids = core_affinity::get_core_ids().unwrap();
+//         core_affinity::set_for_current(*core_ids.last().unwrap());
+//         while let Ok(raw_func) = rx.recv() {
+//             raw_func.invoke();
+//         }
+//     });
+//
+//     let logger = OwnedDataLogger::new();
+//     let logger_context = LoggerWithContext::new(logger, log_message);
+//     let raw_func = RawFunc::new(move || {
+//         logger_context.log_with_context();
+//     });
+//
+//     sx.send(raw_func);
+//
+//     Ok(())
+// }
 
 // RawFunc: lock-free fn pointer
 pub struct RawFunc {
