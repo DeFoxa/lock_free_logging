@@ -22,7 +22,7 @@ where
 }
 
 fn main() {
-    let iterations = 100000;
+    let iterations = 10000000;
 
     let mut raw_func_logger = RawFuncLogger::new();
 
