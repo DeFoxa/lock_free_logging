@@ -1,5 +1,5 @@
 use futures::executor::block_on;
-use lib::example_types::*;
+use lib::types::*;
 use lib::{enum_logger::*, raw_func_logger::*};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
