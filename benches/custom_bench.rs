@@ -22,11 +22,11 @@ where
 }
 
 fn main() {
-    let iterations = 100000;
+    let iterations = 10000000;
 
     let mut raw_func_logger = RawFuncLogger::new();
 
-    run_raw_func_benchmark("Test_1", iterations, || {
+    run_raw_func_benchmark("RawFunc Bench", iterations, || {
         let start = Instant::now();
         let _ = block_on(raw_func_logger.log(Arc::new(OwnedLogMsg::Warning {
             warning_message: "test".to_string(),
