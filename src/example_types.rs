@@ -98,6 +98,12 @@ impl<'a> LogMsg<'a> {
     }
 }
 
+impl<'a> Formattable for LogMsg<'a> {
+    fn formatting(&self) -> String {
+        unimplemented!();
+    }
+}
+
 //NOTE: Example implementation: these field(s) and field types will change based on Deserialized stream data
 #[derive(Eq, PartialEq, Hash, Debug, Clone)]
 pub enum NormalizedEventTypes<'a> {
@@ -150,7 +156,8 @@ pub enum NormalizedEventTypes<'a> {
 // data and error messages to LogMsg enum. using owned types for simplicity
 #[derive(Debug, Clone)]
 pub struct ExampleOB {
-    pub symbol: String,
+    pub symbol: i32, // Setting as i32 instead of String, will never use a String allocation in log
+    // hot path anyway, this will be more accurate
     pub bids: Vec<[i64; 2]>,
     pub asks: Vec<[i64; 2]>,
     pub timestamp: i64,
@@ -158,7 +165,7 @@ pub struct ExampleOB {
 impl ToLogMsg for ExampleOB {
     fn to_log_msg(self) -> OwnedLogMsg {
         OwnedLogMsg::Event(OwnedEventType::MarketOrderBookUpdate {
-            symbol: self.symbol,
+            symbol: self.symbol.to_string(),
             bids: self.bids,
             asks: self.asks,
             event_timestamp: self.timestamp,
