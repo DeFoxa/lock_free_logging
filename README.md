@@ -19,4 +19,4 @@
 
 ## General Results
 - RawFunc_logger bench avg ~125ns
-- enum_logger sub 100ns avg
+- enum_logger: unoptimized enum is sub 90ns avg, optimized enums ~70ns avg
