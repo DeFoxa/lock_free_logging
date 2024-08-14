@@ -1,10 +1,10 @@
 use futures::executor::block_on;
 use lib::example_types::*;
-use lib::raw_func_logger::*;
+use lib::{enum_logger::*, raw_func_logger::*};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-fn run_raw_func_benchmark<F>(name: &str, iterations: u32, mut f: F)
+fn run_benchmark<F>(name: &str, iterations: u32, mut f: F)
 where
     F: FnMut() -> Duration,
 {
@@ -22,15 +22,40 @@ where
 }
 
 fn main() {
-    let iterations = 10000000;
+    let iterations = 1000000;
 
     let mut raw_func_logger = RawFuncLogger::new();
 
-    run_raw_func_benchmark("RawFunc Bench", iterations, || {
+    run_benchmark("RawFunc Bench", iterations, || {
         let start = Instant::now();
-        let _ = block_on(raw_func_logger.log(Arc::new(OwnedLogMsg::Warning {
-            warning_message: "test".to_string(),
+        let _ = block_on(raw_func_logger.log(Arc::new(LogMsg::Warning {
+            warning_message: ".",
         })));
+        start.elapsed()
+    });
+
+    let mut enum_logger = EnumLogger::new();
+
+    run_benchmark("LogMsg enum Bench", iterations, || {
+        let start = Instant::now();
+        let _ = block_on(enum_logger.log(LogMsg::Warning {
+            warning_message: ".",
+        }));
+        start.elapsed()
+    });
+
+    let mut alternate_enum_logger = EnumLogger::new();
+
+    run_benchmark("ExampleOB enum Bench", iterations, || {
+        let example_ob = ExampleOB {
+            symbol: 1,
+            bids: [[50000, 100], [49900, 200], [49800, 150]].to_vec(),
+            asks: [[50100, 120], [50200, 180], [50300, 90]].to_vec(),
+            timestamp: 1629382400000,
+        };
+
+        let start = Instant::now();
+        let _ = block_on(alternate_enum_logger.log(example_ob));
         start.elapsed()
     });
 }
