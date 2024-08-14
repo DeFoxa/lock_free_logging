@@ -1,4 +1,4 @@
-use crate::{example_types::ExampleOB, raw_func_logger::Formattable};
+use crate::{raw_func_logger::Formattable, types::ExampleOB};
 use lockfree::channel::spsc::{create, Receiver, Sender};
 use std::thread;
 

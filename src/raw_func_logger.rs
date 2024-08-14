@@ -1,5 +1,5 @@
 #![allow(warnings)]
-use crate::example_types::{LogMsg, NormalizedEventTypes, OwnedLogMsg};
+use crate::types::{LogMsg, NormalizedEventTypes, OwnedLogMsg};
 use chrono::Utc;
 use eyre::Result;
 use lockfree::channel::spsc::{create, Receiver, Sender};
