@@ -165,6 +165,26 @@ impl ToLogMsg for ExampleOB {
         })
     }
 }
+impl Formattable for ExampleOB {
+    fn formatting(&self) -> String {
+        format!(
+            "OrderBook - Symbol: {}, Timestamp: {}\nBids: {}\nAsks: {}",
+            self.symbol,
+            self.timestamp,
+            format_limits(&self.bids),
+            format_limits(&self.asks)
+        )
+    }
+}
+
+fn format_limits(orders: &Vec<[i64; 2]>) -> String {
+    orders
+        .iter()
+        .map(|&[price, amount]| format!("[Price: {}, Amount: {}]", price, amount))
+        .collect::<Vec<String>>()
+        .join(", ")
+}
+
 // Example of error message type to implement S
 #[derive(Debug, Clone)]
 pub struct ExampleErrorMsg {
