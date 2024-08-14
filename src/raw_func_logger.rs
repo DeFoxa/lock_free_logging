@@ -67,7 +67,7 @@ impl<'a> Logger<'a> {
         }
     }
     fn log(&self, message: &LogMsg) {
-        let formatted_msg = message.format();
+        let formatted_msg = message.formatting();
 
         //NOTE: Add actual logging/send/publish method below
         // println!("{:?}", formatted_msg);
@@ -95,7 +95,7 @@ impl OwnedDataLogger {
         }
     }
     fn log(&self, message: LogMsg) {
-        let formatted_msg = message.format();
+        let formatted_msg = message.formatting();
         //NOTE: Add actual logging/send/publish method below
         // println!("{:?}", formatted_msg);
     }

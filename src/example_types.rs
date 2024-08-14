@@ -16,8 +16,8 @@ pub enum LogMsg<'a> {
         error_message: &'a str,
     },
 }
-impl<'a> LogMsg<'a> {
-    pub fn format(&self) -> String {
+impl<'a> Formattable for LogMsg<'a> {
+    fn formatting(&self) -> String {
         match self {
             LogMsg::Error {
                 error_code,
@@ -95,12 +95,6 @@ impl<'a> LogMsg<'a> {
                 // match to eventtypes
             }
         }
-    }
-}
-
-impl<'a> Formattable for LogMsg<'a> {
-    fn formatting(&self) -> String {
-        unimplemented!();
     }
 }
 
