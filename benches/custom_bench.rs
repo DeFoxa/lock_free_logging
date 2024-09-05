@@ -3,7 +3,6 @@ use lib::types::*;
 use lib::{enum_logger::*, raw_func_logger::*};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-//tmp
 
 fn run_benchmark<F>(name: &str, iterations: u32, mut f: F)
 where
